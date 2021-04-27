@@ -21,7 +21,7 @@ def calculate_distance_from_readings_and_params(chan_data, params):
   # Distance is given from parallel plate formula as
   sensor_reading_dist = e0*params["er"]*params["area"] / sensor_reading_cap;
 
-
+  return sensor_reading_dist
 
 
 
