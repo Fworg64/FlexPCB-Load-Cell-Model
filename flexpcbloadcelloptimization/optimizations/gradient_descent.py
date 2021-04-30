@@ -1,5 +1,7 @@
 """
+Gradient Descent OptimizationSolver
 
+  -=- Does Gradient Descent !
 """
 from optimization_solver_base import OptimizationSolver
 
