@@ -1,6 +1,6 @@
+import numpy as np
 
-
-def calculate_distance_from_readings_and_params(chan_data, params):
+def calculate_distance_from_readings_and_params(chan_data_in, params):
   """
   chan_data : The list/array of read values for a particular channel
   
@@ -14,10 +14,12 @@ def calculate_distance_from_readings_and_params(chan_data, params):
   e0 = 8.854e-12 # Dielectric permitivity of free space
   pi = 3.1415
 
+  chan_data = np.asarray([float(datum) for datum in chan_data_in])
+
   # Resonant frequency of tank ciruit is [clk_freq (40 MHz)] x reading / [gain (2^16)]
   sensor_reading_freq = 40e6 * chan_data / (2**16); 
   # Capacitance is given from resonant frequency as
-  sensor_reading_cap  = 1.0 ./ (params["L"] * (2.0*pi*sensor_reading_freq)**2.0) - params["cfilt"];
+  sensor_reading_cap  = 1.0 / (params["L"] * (2.0*pi*sensor_reading_freq)**2.0) - params["cfilt"];
   # Distance is given from parallel plate formula as
   sensor_reading_dist = e0*params["er"]*params["area"] / sensor_reading_cap;
 
