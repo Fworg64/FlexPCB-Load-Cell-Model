@@ -9,7 +9,7 @@ used, the gradient norm history
 """
 
 class OptimizationSolver:
-  def __init__(self, obj, obj_grad, x0, obj_tol, obj_grad_tol=None, obj_grad_norm=2:
+  def __init__(self, obj, obj_grad, x0, obj_tol, obj_grad_tol=None, obj_grad_norm=2):
     self.obj = obj                # A function handle to the objective as a function of (N,) dimension numpy array
     self.obj_grad = obj_grad      # A function handle to the gradient of the objective, same argument
     self.x0 = x0                  # The initial iterate

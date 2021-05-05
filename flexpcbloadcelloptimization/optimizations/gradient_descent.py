@@ -3,7 +3,7 @@ Gradient Descent OptimizationSolver
 
   -=- Does Gradient Descent !
 """
-from optimization_solver_base import OptimizationSolver
+from .optimization_solver_base import OptimizationSolver
 
 class GradientDescent(OptimizationSolver):
   def set_params(self, stepsize):
