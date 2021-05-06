@@ -18,7 +18,7 @@ def calc_Kalman(A,H,Q,R,zk,xk,Pk):
     assert  A.shape[1]== Pk.shape[0],"Incorrect Dimensions between A and Pk"
     assert  A.shape[0] == Q.shape[0],"Incorrect Dimensions between A and Q"
     """
-    N = xk.shape #Define Length of state vector
+    N = xk.shape[0] #Define Length of state vector
 
     xk_m = A@xk                # xk time update
     Pk_m = A@Pk@A.T + Q  # Pk time update
