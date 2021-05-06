@@ -14,8 +14,8 @@ class GradientDescent(OptimizationSolver):
 
     #k = 0
     xk = self.x0
-    gfk = obj_grad(x0)
-    fk = obj(x0)
+    gfk = self.obj_grad(self.x0)
+    fk = self.obj(self.x0)
 
     fk_rec = [fk]
     
@@ -24,9 +24,9 @@ class GradientDescent(OptimizationSolver):
       gfk_norm_rec = [gfk_norm]
 
     while (fk > self.obj_tol):
-      xk = xk - stepsize * gfk;
-      gfk = obj_grad(xk)
-      fk = obj(x0)
+      xk = xk - self.stepsize * gfk;
+      gfk = self.obj_grad(xk)
+      fk = self.obj(xk)
 
       fk_rec.append(fk)
       
@@ -37,8 +37,8 @@ class GradientDescent(OptimizationSolver):
           break
 
     if (self.obj_grad_tol is not None):
-      return (x_star, fk_rec, gfk_norm_rec)
+      return (xk, fk_rec, gfk_norm_rec)
     else:
-      return (x_star, fk_rec)
+      return (xk, fk_rec)
     
     
