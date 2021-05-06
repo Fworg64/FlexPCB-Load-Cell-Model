@@ -3,6 +3,8 @@ import matplotlib.pyplot as plt
 import numpy as np
 
 from optimizations.gradient_descent import GradientDescent
+from calc_Kalman import calc_Kalman
+import grads as g
 
 def get_ndof(M):   # Given the number of masses for the system
   return 2*M*M + 1 # return number of variable entries, ndof, in dynamics matrix
@@ -41,18 +43,17 @@ A = [A; zeros(1,ndim)];
     A.append([0]*(index*2) + [0, 1] + [0]*((M-1-index)*2)))
     A.append([x[idx] for idx in ndim + 1 + (index-1)*(ndim-1)):(ndim + index*(ndim-1)))] + [0])
   A.append([0] * ndim)
-
   return A
 
 def generate_kalman_objective(params):
 """
-Given a dictionary of params, generate an objective function of a single vector for use by 
+Given a dictionary of params, generate an objective function of a single vector for use by
 the optimization framework.
 
 params: dictionary of following terms
   'M'      : int, Number of masses
   'p1_idx' : int, Mass index of top plate \in [0, M-2]; 0 is the plate at the input, M is near the boundary
-  'p2_idx' : int, Mass index of bottom plate \in [p1_idx+1, M-1]  
+  'p2_idx' : int, Mass index of bottom plate \in [p1_idx+1, M-1]
   'Q'      : np array, (ndim x ndim) process covariance matrix
   'R'      : float, Measurement covariance (only one channel for now)
   'zk'     : time series list of measurements
@@ -92,12 +93,23 @@ params: dictionary of following terms
     sum_meas_err  = np.linalg.norm(meas_err, 2)
 
     return sum_state_err + sum_meas_err
-
   return objective_func
 
 
 def generate_kalman_objective_gradient(params):
-  pass
+    M = params["M"]
+    ndim = get_ndim(M)
+    ndof = get_ndof(M)
+    Q = params["Q"]
+    x0 = params["x0"]
+
+    def objective_grad(x):
+      A = unpack_x(x,M)
+
+      obj_grad = gradA(A,Q,x)
+      return obj_grad
+    return objective_grad
+
 
 
 def do_Calculations():
