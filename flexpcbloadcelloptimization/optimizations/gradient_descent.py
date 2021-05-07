@@ -13,9 +13,10 @@ class GradientDescent(OptimizationSolver):
     assert hasattr(self, 'stepsize'), "Stepsize must be given to set_params first!"
 
     #k = 0
-    xk = self.x0
-    gfk = self.obj_grad(self.x0)
-    fk = self.obj(self.x0)
+    xk = self.v0
+    fk, state = self.obj(self.v0)
+    gfk = self.obj_grad(self.v0,state)
+
 
     fk_rec = [fk]
     
@@ -25,8 +26,9 @@ class GradientDescent(OptimizationSolver):
 
     while (fk > self.obj_tol):
       xk = xk - self.stepsize * gfk;
-      gfk = self.obj_grad(xk)
-      fk = self.obj(xk)
+      fk,state = self.obj(xk)
+      gfk = self.obj_grad(xk,state)
+
 
       fk_rec.append(fk)
       
