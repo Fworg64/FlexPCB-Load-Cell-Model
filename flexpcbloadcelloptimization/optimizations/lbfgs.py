@@ -3,7 +3,7 @@ Limited Memory BFGS
 """
 import numpy as np
 
-from optimization_solver_base import OptimizationSolver
+from optimizations.optimization_solver_base import OptimizationSolver
 
 def Inverse_Hessian_Direction(Yk, Sk, recent_grad):
   q = np.array(recent_grad)
