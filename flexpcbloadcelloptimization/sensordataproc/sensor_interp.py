@@ -1,9 +1,10 @@
 import numpy as np
+import csv
 
 def read_experiment_data(path):
-"""
-Given the path to the all_exp.txt file, loads the time series data and returns a dictionary of the columns.
-"""
+  """ 
+  Given the path to the all_exp.txt file, loads the time series data and returns a dictionary of the columns.
+  """
   with open('all_exp.txt', newline='') as csvfile:
     myreader = csv.reader(csvfile, delimiter=',')
     for idx,row in enumerate(myreader):
@@ -12,7 +13,7 @@ Given the path to the all_exp.txt file, loads the time series data and returns a
         data = {name: [] for name in names}
       else:
         for coldex, name in enumerate(names):
-          data{name}.append(row[coldex])
+          data[name].append(row[coldex])
   return data
    
 
