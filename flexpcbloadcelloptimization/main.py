@@ -183,7 +183,7 @@ def do_Calculations(data):
   # Load the data from a list in a dictionary
   # Measurements for system
   zk = np.asarray(data["common_um"], dtype=float).reshape((nOuts,nSamples)) # np.random.rand(nOuts, nSamples) 
-  v0 = np.arange(-9,0)  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
+  v0 = np.array([-10.0,-1.0,10.0, 1.0, 5.0, 10.0, 1.0, -10.0, -1.0])  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
   x0 = np.zeros(ndim)
   P0 = np.eye(ndim)
   F_in = np.asarray(data["common_kn"], dtype=float) # np.zeros(nSamples) # True applied force
@@ -197,7 +197,7 @@ def do_Calculations(data):
   obj          = generate_kalman_objective(params)
   obj_grad = generate_kalman_objective_gradient(params)
 
-  stepsize = 0.1
+  stepsize = 1.0e4
   obj_tol = 1e-6
 
   gradient_descent_solver = GradientDescent(obj, obj_grad, v0, obj_tol)
@@ -221,7 +221,7 @@ def main():
   x_star, obj_hist = do_Calculations(data)
 
   # Do Plotting
-  print(x_star)
+  print("Solution found: {0}".format(x_star))
   
   plt.figure()
   plt.plot(obj_hist)

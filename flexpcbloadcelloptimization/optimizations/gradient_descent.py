@@ -41,7 +41,7 @@ class GradientDescent(OptimizationSolver):
       k = k+1
 
       if (do_print != 0 and k % do_print == 0):
-        print("k = {0}, fk = {1}".format(k,fk))
+        print("k = {0}, fk = {1}, \n xk = {2} \n gfk = {3}".format(k,fk, xk, gfk))
 
     if (self.obj_grad_tol is not None):
       return (xk, fk_rec, gfk_norm_rec)
