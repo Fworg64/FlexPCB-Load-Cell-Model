@@ -1,5 +1,5 @@
 """
-This file containts the tests for the interface and functionality of the 
+This file contains the tests for the interface and functionality of the 
 Gradient Descent method
 
 """
@@ -18,9 +18,9 @@ from optimizations.optimization_solver_base import OptimizationSolver
 def test_obj(x):
   A = np.asarray([[2, 1], [0, 1]])
   value = x.T @ A @ x
-  return value
+  return value, None # return None here to mimic returning state history from real objective (not used here)
 
-def test_obj_grad(x):
+def test_obj_grad(x, state=None):
   A = np.asarray([[2, 1], [0, 1]])
   return x.T@(A + A.T)
 
@@ -35,7 +35,7 @@ class TestGradientDescent(unittest.TestCase):
   def test_test_obj_grad(self):
     x0 = np.asarray([[1], [1]])
     x0 = x0.flatten()
-    err = check_grad(test_obj, test_obj_grad, x0)
+    err = check_grad(lambda x: test_obj(x)[0], test_obj_grad, x0)
     self.assertLess(err, 1e-4)
   
   def test_can_minimize_obj_tol(self):
@@ -43,7 +43,7 @@ class TestGradientDescent(unittest.TestCase):
     my_gd_optimizer = GradientDescent(test_obj, test_obj_grad, x0, 1e-4)
     my_gd_optimizer.set_params(0.05)
     x_star, fk_rec = my_gd_optimizer.run()
-    self.assertTrue(test_obj(x_star) < 1e-4)
+    self.assertTrue(test_obj(x_star)[0] < 1e-4)
 
 
 if __name__ == '__main__':
