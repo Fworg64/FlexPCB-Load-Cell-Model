@@ -2,6 +2,7 @@
 Limited Memory BFGS
 """
 import numpy as np
+import pdb
 
 from optimizations.optimization_solver_base import OptimizationSolver
 
@@ -12,7 +13,7 @@ def Inverse_Hessian_Direction(Yk, Sk, recent_grad):
 
   for index in range(0, len(Yk)): #from most recent to least
       Pk[index] = (1.0/(np.transpose(Yk[index]).dot(Sk[index])))
-      alphas[index] = Pk[index].dot(np.transpose(Sk[index])).dot(q)
+      alphas[index] = Pk[index] * (Sk[index].T.dot(q))
       #print("yk = ", Yk[index])
       #print("alphak = ", alphas[index])
       q = np.subtract(q,(alphas[index])*Yk[index])
@@ -23,7 +24,7 @@ def Inverse_Hessian_Direction(Yk, Sk, recent_grad):
   z = q.dot(gamma)
   #print("zcalc = ", z)
   for index in range(len(Yk) -1, 0, -1): #from old to new
-      Beta = Pk[index].dot(np.transpose(Yk[index])).dot(z)
+      Beta = Pk[index] * (Yk[index].T.dot(z))
       epp = alphas[index] - Beta
       z = np.add(z,epp*Sk[index])
       #print("epp = ", epp)
@@ -35,13 +36,13 @@ class LBFGS(OptimizationSolver):
   def set_params(self, memory):
     self.memory = memory
 
-  def run(self):
+  def run(self, do_print=0):
     assert hasattr(self, 'memory'), "Memory must be given to set_params first!"
 
-    #k = 0
-    xk = self.x0
-    gfk = obj_grad(x0)
-    fk = obj(x0)
+    k = 0
+    xk = [self.v0]
+    fk, state = self.obj(self.v0)
+    gfk = self.obj_grad(self.v0, state)
 
     fk_rec = [fk]
     
@@ -49,11 +50,42 @@ class LBFGS(OptimizationSolver):
       gfk_norm = np.linalg.norm(self.obj_grad_norm)
       gfk_norm_rec = [gfk_norm]
 
-    while (fk > self.obj_tol):
-      xk = xk - stepsize * gfk;
-      gfk = obj_grad(xk)
-      fk = obj(x0)
+    # L-BFGS Params
+    N = xk[0].shape[0] # dimension of problem
 
+    # Get a starter iteration from gradient descent
+    xk.insert(0, np.subtract(xk[0], 0.2*gfk))
+    last_grad = gfk
+    fk, state = self.obj(xk[0])
+    gfk = self.obj_grad(xk[0], state)
+    Sk = [np.array(np.subtract(xk[0], xk[1]))]
+    Yk = [np.array(np.subtract(gfk,last_grad))]
+
+    while (fk > self.obj_tol):
+      #L-BFGS Method
+      # compute search dir
+      z = Inverse_Hessian_Direction(Yk, Sk, last_grad)
+      # line search
+      div = 200
+      steps = np.zeros((div,1))
+      potentialXkfun = np.zeros((div,1))
+      for b_index in range(0,div):
+        steps[b_index] = steps[b_index-1] + 5/div
+        potentialXkfun[b_index] = self.obj(
+                          np.subtract(xk[0],steps[b_index]*z))[0] # only take objective value, not state
+      # end line search
+      xk.insert(0,np.subtract(xk[0], steps[np.argmin(potentialXkfun)]*z)) 
+      last_grad = gfk
+      fk, state = self.obj(xk[0])
+      gfk = self.obj_grad(xk[0], state)
+      # extend Yk, Sk
+      Sk.insert(0,np.subtract(xk[0], xk[1]))
+      Yk.insert(0,np.subtract(gfk, last_grad))
+      # trim Yk, Sk for L of L-BFGS
+      if (len(Yk) > self.memory):
+        Yk = Yk[0:self.memory]
+        Sk = Sk[0:self.memory]
+      # record objective value
       fk_rec.append(fk)
       
       if (self.obj_grad_tol is not None):
@@ -62,10 +94,15 @@ class LBFGS(OptimizationSolver):
         if (gfk_norm < self.obj_grad_tol):
           break
 
+      k = k+1
+
+      if (do_print != 0 and k % do_print == 0):
+        print("k = {0}, fk = {1}, \n xk = {2} \n gfk = {3}".format(k,fk, xk, gfk))
+
     if (self.obj_grad_tol is not None):
-      return (x_star, fk_rec, gfk_norm_rec)
+      return (xk[0], fk_rec, gfk_norm_rec)
     else:
-      return (x_star, fk_rec)
+      return (xk[0], fk_rec)
     
     
 
