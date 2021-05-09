@@ -9,6 +9,7 @@ import scipy
 
 from sensordataproc import sensor_interp
 from optimizations.gradient_descent import GradientDescent
+from optimizations.lbfgs import LBFGS
 from calc_Kalman import calc_Kalman
 import grads as g
 
@@ -184,7 +185,7 @@ def do_Calculations(data):
   # Load the data from a list in a dictionary
   # Measurements for system
   zk = np.asarray(data["common_um"], dtype=float).reshape((nOuts,nSamples)) # np.random.rand(nOuts, nSamples) 
-  v0 = np.array([-10.0,-1.0,10.0, 1.0, 5.0, 10.0, 1.0, -10.0, -1.0])  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
+  v0 = np.array([-100.0,-100.0,100.0, 100.0, 50.0, 100.0, 100.0, -100.0, -100.0])  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
   x0 = np.zeros(ndim)
   P0 = np.eye(ndim)
   F_in = np.asarray(data["common_kn"], dtype=float) # np.zeros(nSamples) # True applied force
@@ -204,9 +205,15 @@ def do_Calculations(data):
   gradient_descent_solver = GradientDescent(obj, obj_grad, v0, obj_tol)
   gradient_descent_solver.set_params(stepsize)
 
+  lbfgs_solver = LBFGS(obj, obj_grad, v0, obj_tol)
+  lbfgs_solver.set_params(2)
+
   # Run solvers
-  print("Going to run Gradient Descent")
-  x_star, obj_hist = gradient_descent_solver.run(1000)
+  #print("Going to run Gradient Descent")
+  #x_star, obj_hist = gradient_descent_solver.run(1000)
+  
+  print("Going to run LBFGS")
+  x_star, obj_hist = lbfgs_solver.run(1)
 
   return x_star, obj_hist
 
@@ -218,6 +225,8 @@ def main():
   all_data["common_um"] = \
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
+
+  data["common_kn"] = [float(d) for d in data["common_kn"] ]
 
   x_star, obj_hist = do_Calculations(data)
 
