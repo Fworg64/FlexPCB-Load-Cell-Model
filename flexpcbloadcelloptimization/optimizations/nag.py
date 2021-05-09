@@ -2,7 +2,7 @@
 Nesterov's Accelerated Gradient
 """
 
-from optimization_solver_base import OptimizationSolver
+from optimizations.optimization_solver_base import OptimizationSolver
 import numpy as np
 
 class NesterovAcceleratedGradient(OptimizationSolver):
@@ -10,14 +10,17 @@ class NesterovAcceleratedGradient(OptimizationSolver):
     self.a_k = a_k
     self.b_k = b_k
 
-  def run(self):
+  def run(self, do_print=0):
     assert hasattr(self, 'a_k') # 'a_k, b_k must be given to set_params first!"
     assert hasattr(self, 'b_k') # 'a_k, b_k must be given to set_params first!"
 
-    #k = 0
+    if self.b_k == 0:
+      bCalc = True
+    k = 0
     vk = self.v0
-    gfk = self.obj_grad(vk)
-    fk = self.obj(vk)
+    fk,state = self.obj(vk)
+    gfk = self.obj_grad(vk,state)
+
     yk = vk
 
     fk_rec = [fk]
@@ -30,13 +33,23 @@ class NesterovAcceleratedGradient(OptimizationSolver):
       vk_1 = vk
       vk = yk - self.a_k*gfk
 
-      # bk = 1.0 - 3.0/(k+1.0)
-      yk = vk + self.b_k*(vk - vk_1)
+      if bCalc:
+        b_k = 1.0 - 3.0 / (k + 1.0)
+        yk = vk + b_k * (vk - vk_1)
+      else:
+        yk = vk + self.b_k * (vk - vk_1)
 
-      gfk = self.obj_grad(yk)
-      fk  = self.obj(vk)
+
+      fk,state = self.obj(vk)
+      gfk = self.obj_grad(yk,state)
+
 
       fk_rec.append(fk)
+
+      k+=1
+
+      if (do_print != 0 and k % do_print == 0):
+        print("k = {0}, fk = {1}, \n vk = {2} \n gfk = {3}".format(k,fk, vk, gfk))
 
       if (self.obj_grad_tol is not None):
         gfk_norm = np.linalg.norm(gfk, self.obj_grad_norm)
