@@ -30,6 +30,8 @@ def gradQ(A,Q,Xk):
     Exit with:
     grad: the Gradient of the Objective function w.r.t. Qinv
     """
+    Xk = np.asarray(Xk)
+    Xk = Xk.T
     T = Xk.shape[1]
     sumOut = np.zeros_like(A)
     for i in range(T):
@@ -49,6 +51,8 @@ def gradR(H,R,Xk,Yk):
     Exit with:
     grad: the Gradient of the Objective function w.r.t. Rinv
     """
+    Xk = np.asarray(Xk)
+    Xk = Xk.T
     T = Xk.shape[0]
     sumOut = np.zeros_like(R)
     for i in range(T):

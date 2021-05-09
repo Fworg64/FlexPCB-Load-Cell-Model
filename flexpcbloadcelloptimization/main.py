@@ -9,8 +9,11 @@ import scipy
 
 from sensordataproc import sensor_interp
 from optimizations.gradient_descent import GradientDescent
+from optimizations.nag import NesterovAcceleratedGradient as NAG
 from calc_Kalman import calc_Kalman
 import grads as g
+import sys
+import argparse
 
 import pdb
 
@@ -162,7 +165,7 @@ def generate_kalman_objective_gradient(params):
 
 
 
-def do_Calculations(data):
+def do_Calculations(data, specs):
   """
    Given the data dictionary, does the calculations for each optimization method
 
@@ -191,26 +194,64 @@ def do_Calculations(data):
 
   #  Load Dictionary values
   R[0,0] = 1
-  Q = np.diag([0.1, 0.1, 0.1, 0.1, 1])
+  Q = np.eye(ndim)
+  Q[:-1, :-1] *= 0.01
   # Load Dictionary
   params = {'M': M, 'p1_idx': 0,'p2_idx':1, 'Q': Q, 'R': R, 'zk': zk, 'v0': v0, 'x0':x0, 'P0': P0, 'F_in': F_in}
 
   obj          = generate_kalman_objective(params)
   obj_grad = generate_kalman_objective_gradient(params)
 
-  stepsize = 1.0e4
   obj_tol = 1e-6
+  x_starGD = []
+  x_starNAG = []
+  x_starLBFGS = []
+  obj_histGD = []
+  obj_histNAG = []
+  obj_histLBFGS = []
+  times = {}
+  if specs['GD']:
+    gradient_descent_solver = GradientDescent(obj, obj_grad, v0, obj_tol)
+    gradient_descent_solver.set_params(specs['step'])
+    # Run solvers
+    print("Going to run Gradient Descent")
+    ti = time.time()
+    x_starGD, obj_histGD = gradient_descent_solver.run(specs['update'])
+    to = time.time()
+    times['GD'] = to - ti
 
-  gradient_descent_solver = GradientDescent(obj, obj_grad, v0, obj_tol)
-  gradient_descent_solver.set_params(stepsize)
+  if specs['NAG']:
+    NAG_solver = NAG(obj, obj_grad, v0, obj_tol)
+    if specs['beta'] is not None:
+      NAG_solver.set_params(specs['alpha'], specs['beta'])
+      print(f"Going to run NAG, alpha = {specs['alpha']}, beta = {specs['beta']}")
+    else:
+      NAG_solver.set_params(specs['alpha'],0)
+      print(f"Going to run NAG, alpha = {specs['alpha']}, beta calculated")
+    ti = time.time()
+    x_starNAG, obj_histNAG = NAG_solver.run(specs['update'])
+    to = time.time()
+    times['NAG'] = to - ti
 
-  # Run solvers
-  print("Going to run Gradient Descent")
-  x_star, obj_hist = gradient_descent_solver.run(1000)
 
-  return x_star, obj_hist
+  x_star = [x_starNAG,x_starGD]
+  obj_hist = [obj_histNAG,obj_histGD]
+
+  return x_star, obj_hist, times
 
 def main():
+  parser = argparse.ArgumentParser(description="Specify which methods to run")
+
+  parser.add_argument("-g","--GD",help="Run Gradient Descent", action='store_true')
+  parser.add_argument("-n", "--NAG", help="Run NAG", action='store_true')
+  parser.add_argument("-l", "--LBF", help="Run LBFGS", action='store_true')
+  parser.add_argument("-s", "--step", help="Specify step length for GD, default is 1.0e4", type=float, default=1.0e4)
+  parser.add_argument("-a", "--alpha", help="Specify alpha for NAG, default is 1", type=float, default=1)
+  parser.add_argument("-b", "--beta", help="Specify beta for NAG, no input -> beta calculated", type=float)
+  parser.add_argument("-u","--update", default=1000, type=int, help='Show system performance every UPDATE iterations, 0 suppresses printing, default is 1000')
+  runDet = vars(parser.parse_args())
+
+  print(runDet)
   big_plateA = 0.001527
   lil_plateA = 0.001164
   all_data = sensor_interp.read_experiment_data("all_exp.txt")
@@ -219,7 +260,7 @@ def main():
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
 
-  x_star, obj_hist = do_Calculations(data)
+  x_star, obj_hist, times = do_Calculations(data, runDet)
 
   # Do Plotting
   print("Solution found: {0}".format(x_star))
