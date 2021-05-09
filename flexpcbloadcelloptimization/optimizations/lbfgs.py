@@ -39,9 +39,9 @@ class LBFGS(OptimizationSolver):
     assert hasattr(self, 'memory'), "Memory must be given to set_params first!"
 
     #k = 0
-    xk = self.x0
-    gfk = obj_grad(x0)
-    fk = obj(x0)
+    xk = self.v0
+    fk, state = self.obj(self.v0)
+    gfk = self.obj_grad(self.v0, state)
 
     fk_rec = [fk]
     
@@ -49,7 +49,61 @@ class LBFGS(OptimizationSolver):
       gfk_norm = np.linalg.norm(self.obj_grad_norm)
       gfk_norm_rec = [gfk_norm]
 
+    # L-BFGS Params
+    N = xk.shape[0] # dimension of problem
+
+    # Get a starter iteration from gradient descent
+    xk.insert(0, np.subtract(xk[0], 0.2*gfk)
+    last_grad = gfk
+    fk, state = self.obj(self.xk[0])
+    gfk = self.obj_grad(xk[0], state)
+    Sk = [np.array(np.subtract(xk[0], xk[1]))]
+    temper = np.subtract(gfk,last_grad)
+    Yk = [np.array(temper)]
+
     while (fk > self.obj_tol):
+      #L-BFGS Method
+      #STEP = .25
+      #MEM = 15 #number of iterations to rememeber
+
+
+
+  last_grad = Rosenbrock_grad(Xk[0], ALPHA)
+  #print("last_grad = ", last_grad)
+  num_iter = 60
+  Fvalrecord = np.zeros((num_iter,1))
+  for iterations in range(0,num_iter):
+    #compute search dir
+    z = Inverse_Hessian_Direction(Yk, Sk, last_grad)
+    #Xk.insert(0,np.subtract(Xk[0],STEP*z)) #line search here
+    div = 200
+    steps = np.zeros((div,1))
+    potentialXkfun = np.zeros((div,1))
+    for b_index in range(0,div):
+        steps[b_index] = steps[b_index-1] + 5/div
+        potentialXkfun[b_index] = Rosenbrock_func(
+                            np.subtract(Xk[0],steps[b_index]*z), ALPHA)
+    Xk.insert(0,np.subtract(Xk[0],
+                            steps[np.argmin(potentialXkfun)]*z)) #line search here
+
+    #print("xk",iterations,"  ", Xk[-1])
+    #extend Yk, Sk
+    Sk.insert(0,np.subtract(Xk[0], Xk[1]))
+    Yk.insert(0,np.subtract(Rosenbrock_grad(Xk[0], ALPHA), Rosenbrock_grad(Xk[1], ALPHA)))
+    last_grad = Rosenbrock_grad(Xk[0], ALPHA)
+    #trim Yk, Sk for L of L-BFGS
+    #print(len(Yk))
+    if (len(Yk) > MEM):
+      Yk = Yk[0:MEM]
+      Sk = Sk[0:MEM]
+    #print("Xk= ", Xk[-1])
+    #print("f(Xk)= ",Rosenbrock_func(Xk[-1]))
+    if Rosenbrock_func(Xk[0], ALPHA)[0] > 10**(-6):
+      Fvalrecord[iterations] = Rosenbrock_func(Xk[0], ALPHA)
+    else:
+      Fvalrecord[iterations] = 10**(-6)
+
+#####
       xk = xk - stepsize * gfk;
       gfk = obj_grad(xk)
       fk = obj(x0)

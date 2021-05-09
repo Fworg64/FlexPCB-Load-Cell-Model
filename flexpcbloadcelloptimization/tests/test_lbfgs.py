@@ -14,9 +14,35 @@ import pdb
 from optimizations.lbfgs import LBFGS
 from optimizations.optimization_solver_base import OptimizationSolver
 
+def test_obj(x):
+  A = np.asarray([[2, 1], [0, 1]])
+  value = x.T @ A @ x
+  return value, None # return None here to mimic returning state history from real objective (not used here)
+
+def test_obj_grad(x, state=None):
+  A = np.asarray([[2, 1], [0, 1]])
+  return x.T@(A + A.T)
+
 class TestLBFGS(unittest.TestCase):
   def test_isOptimizationSolver(self):
     self.assertTrue(issubclass(LBFGS, OptimizationSolver))
+
+  def test_can_instantiate(self):
+    my_lbfgs_optimizer = LBFGS(test_obj, test_obj_grad, np.asarray([[1],[1]]), 1e-4)
+    self.assertTrue(True)
+
+  def test_test_obj_grad(self):
+    x0 = np.asarray([[1], [1]])
+    x0 = x0.flatten()
+    err = check_grad(lambda x: test_obj(x)[0], test_obj_grad, x0)
+    self.assertLess(err, 1e-4)
+
+  def test_can_minimize_obj_tol(self):
+    x0 = np.asarray([1, 1])
+    my_lbfgs_optimizer = LBFGS(test_obj, test_obj_grad, x0, 1e-4)
+    my_lbfgs_optimizer.set_params(5) # M: number of records to keep
+    x_star, fk_rec = my_lbfgs_optimizer.run()
+    self.assertTrue(test_obj(x_star)[0] < 1e-4)
 
 if __name__== '__main__':
   unittest.main()
