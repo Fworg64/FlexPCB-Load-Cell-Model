@@ -22,7 +22,7 @@ class NesterovAcceleratedGradient(OptimizationSolver):
     gfk = self.obj_grad(vk,state)
 
     yk = vk
-
+    pk = 0
     fk_rec = [fk]
 
     if (self.obj_grad_tol is not None):
@@ -34,7 +34,11 @@ class NesterovAcceleratedGradient(OptimizationSolver):
       vk = yk - self.a_k*gfk
 
       if bCalc:
-        b_k = 1.0 - 3.0 / (k + 1.0)
+        pk_1 = pk
+        pk = np.roots([-1, (pk - 1), 1])
+        pk = [val for val in pk if val <= 1 and val >= 0]
+        pk = pk[0]
+        b_k = pk*(pk_1**2)
         yk = vk + b_k * (vk - vk_1)
       else:
         yk = vk + self.b_k * (vk - vk_1)
