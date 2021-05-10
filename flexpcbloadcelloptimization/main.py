@@ -10,6 +10,7 @@ import csv
 from pathlib import Path
 
 import sys
+import traceback
 import argparse
 
 from sensordataproc import sensor_interp
@@ -184,7 +185,7 @@ def generate_params(data, M):
   # Measurements for system
   zk = np.asarray(data["common_um"], dtype=float).reshape((nOuts,nSamples)) 
  # v0 is the initialization of optimization variable v (to avoid conflict with state variable x)
-  v0 = np.array([-100.0,-100.0,100.0, 100.0, 50.0, 100.0, 100.0, -100.0, -100.0]) 
+  v0 = np.array([-1500.0,-200.0,1000.0, 1000.0, 500.0, 100.0, 100.0, -1500.0, -100.0]) 
   x0 = np.zeros(ndim) # dynamic system state variable
   P0 = np.eye(ndim)
   F_in = np.asarray(data["common_kn"], dtype=float) # np.zeros(nSamples) # True applied force
@@ -244,6 +245,8 @@ def do_Calculations(data, specs):
         optimal_hists[method] = [state[-1] for state in state_array] # Force estimate is last state
       except:
         print("\nError occured with {0}!\n".format(method))
+        print(traceback.print_tb(sys.exc_info()[2]))
+        print(sys.exc_info())
 
 
   # return dictionary of optimal values, objective history, and times for each method. 
@@ -308,7 +311,7 @@ def main():
   parser.add_argument("-a", "--alpha", help="Specify alpha for NAG, default is 1", type=float, default=1)
   parser.add_argument("-b", "--beta", help="Specify beta for NAG, no input -> beta calculated",
     type=float, default=0.0)
-  parser.add_argument("-m", "--mem", help="Specify memory for LBFGS, default is 2", type=float, default=2)
+  parser.add_argument("-m", "--mem", help="Specify memory for LBFGS, default is 2", type=int, default=2)
   parser.add_argument("-u","--update", default=25, type=int, 
           help='Show system performance every UPDATE iterations, 0 suppresses printing, default is 25')
   parser.add_argument("-k", "--max_iter", help="Specify max # of iterations, default is 100",
