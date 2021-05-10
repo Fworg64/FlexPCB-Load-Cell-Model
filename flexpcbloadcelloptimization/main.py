@@ -164,7 +164,36 @@ def generate_kalman_objective_gradient(params):
       return obj_grad
     return objective_grad
 
+def generate_params(data, M):
+  #Initialize Dictionary Values
+  # M: Number of masses
+  # data: Dictionary of experiment data with "common_um": sensor data, "common_kn" ground truth
+  ndim = get_ndim(M) # number of dimensions in system
+  ndof = get_ndof(M) # number of free CT coefficients
+  nOuts = 1 # number of measurement channels
+  nSamples = 100 # how many samples to consider
+  Q = np.zeros((ndim,ndim))
+  R = np.zeros((nOuts,nOuts))
+  # Load the data from a list in a dictionary
+  # Measurements for system
+  zk = np.asarray(data["common_um"], dtype=float).reshape((nOuts,nSamples)) 
+ # v0 is the initialization of optimization variable v (to avoid conflict with state variable x)
+  v0 = np.array([-100.0,-100.0,100.0, 100.0, 50.0, 100.0, 100.0, -100.0, -100.0]) 
+  x0 = np.zeros(ndim) # dynamic system state variable
+  P0 = np.eye(ndim)
+  F_in = np.asarray(data["common_kn"], dtype=float) # np.zeros(nSamples) # True applied force
 
+  p1_idx = 0
+  p2_idx = 1
+
+  #  Load Dictionary values
+  R[0,0] = 1
+  Q = 20.0 * np.eye(ndim)
+  Q[:-1, :-1] *= 2.01 # set all diagonal, except last, to 2.01
+  # Load Dictionary
+  params = {'M': M, 'p1_idx': p1_idx,'p2_idx':p2_idx, 'Q': Q, 'R': R,
+          'zk': zk, 'v0': v0, 'x0':x0, 'P0': P0, 'F_in': F_in}
+  return params
 
 def do_Calculations(data, specs):
   """
@@ -174,36 +203,15 @@ def do_Calculations(data, specs):
       "tbs" - list of time stamps for each sample
       "common_kn" - list of true applied force
       "common_um" - list of calculated displacement values from the capacitive readings
+
+   specs - the dictionary of parameters parsed from the command line
   """
-  # Load data, set initial params, make obj/obj_grad
-
-  #Initialize Dictionary Values
-  M = 2; # Number of masses
-  ndim = get_ndim(M)
-  ndof = get_ndof(M)
-  nOuts = 1 # number of measurement channels
-  nSamples = 100 # how many samples to consider
-  Q = np.zeros((ndim,ndim))
-  R = np.zeros((nOuts,nOuts))
-  # Load the data from a list in a dictionary
-  # Measurements for system
-  zk = np.asarray(data["common_um"], dtype=float).reshape((nOuts,nSamples)) # np.random.rand(nOuts, nSamples) 
-  v0 = np.array([-10.0,-1.0,10.0, 1.0, 5.0, 10.0, 1.0, -10.0, -1.0])  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
-  x0 = np.zeros(ndim)
-  P0 = np.eye(ndim)
-  F_in = np.asarray(data["common_kn"], dtype=float) # np.zeros(nSamples) # True applied force
-
-  #  Load Dictionary values
-  R[0,0] = 1
-  Q = np.eye(ndim)
-  Q[:-1, :-1] *= 0.01
-  # Load Dictionary
-  params = {'M': M, 'p1_idx': 0,'p2_idx':1, 'Q': Q, 'R': R, 'zk': zk, 'v0': v0, 'x0':x0, 'P0': P0, 'F_in': F_in}
-
+  params       = generate_params(data, 2)
   obj          = generate_kalman_objective(params)
-  obj_grad = generate_kalman_objective_gradient(params)
+  obj_grad     = generate_kalman_objective_gradient(params)
 
-  obj_tol = 1e-6
+  obj_tol  = 10.0
+
   x_starGD = []
   x_starNAG = []
   x_starLBFGS = []
@@ -212,12 +220,12 @@ def do_Calculations(data, specs):
   obj_histLBFGS = []
   times = {}
   if specs['GD']:
-    gradient_descent_solver = GradientDescent(obj, obj_grad, v0, obj_tol)
+    gradient_descent_solver = GradientDescent(obj, obj_grad, params['v0'], obj_tol)
     gradient_descent_solver.set_params(specs['step'])
     # Run solvers
     print("Going to run Gradient Descent")
     ti = time.time()
-    x_starGD, obj_histGD = gradient_descent_solver.run(specs['update'])
+    x_starGD, obj_histGD = gradient_descent_solver.run(specs['update'], specs["max_iter"])
     to = time.time()
     times['GD'] = to - ti
 
@@ -230,7 +238,7 @@ def do_Calculations(data, specs):
       NAG_solver.set_params(specs['alpha'],0)
       print(f"Going to run NAG, alpha = {specs['alpha']}, beta calculated")
     ti = time.time()
-    x_starNAG, obj_histNAG = NAG_solver.run(specs['update'])
+    x_starNAG, obj_histNAG = NAG_solver.run(specs['update'], specs["max_iter"])
     to = time.time()
     times['NAG'] = to - ti
 
@@ -239,7 +247,7 @@ def do_Calculations(data, specs):
     LBF_solver.set_params(specs['mem'])
 
     ti = time.time()
-    x_starLBFGS, obj_histLBFGS = LBF_solver.run(specs['update'])
+    x_starLBFGS, obj_histLBFGS = LBF_solver.run(specs['update'], specs["max_iter"])
     to = time.time()
     times['LBF'] = to - ti
 
@@ -247,7 +255,9 @@ def do_Calculations(data, specs):
   x_star = [x_starNAG,x_starGD,x_starLBFGS]
   obj_hist = [obj_histNAG,obj_histGD,obj_histLBFGS]
 
-  return x_star, obj_hist, times
+  # Return the list of optimal values, the list of history lists,
+  #          the dictionary of times, and the objective function (to generate state history).
+  return x_star, obj_hist, times, obj
 
 def main():
   parser = argparse.ArgumentParser(description="Specify which methods to run")
@@ -259,7 +269,10 @@ def main():
   parser.add_argument("-a", "--alpha", help="Specify alpha for NAG, default is 1", type=float, default=1)
   parser.add_argument("-b", "--beta", help="Specify beta for NAG, no input -> beta calculated", type=float)
   parser.add_argument("-m", "--mem", help="Specify memory for LBFGS, default is 2", type=float, default=2)
-  parser.add_argument("-u","--update", default=1000, type=int, help='Show system performance every UPDATE iterations, 0 suppresses printing, default is 1000')
+  parser.add_argument("-u","--update", default=25, type=int, 
+          help='Show system performance every UPDATE iterations, 0 suppresses printing, default is 25')
+  parser.add_argument("-k", "--max_iter", help="Specify max # of iterations, default is 100",
+                      type=int, default=100)
   runDet = vars(parser.parse_args())
 
   print(runDet)
@@ -271,7 +284,12 @@ def main():
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
 
-  x_star, obj_hist, times = do_Calculations(data, runDet)
+  x_star, obj_hist, times, obj = do_Calculations(data, runDet)
+
+  # Save the list of optimal values, the list of history lists, 
+  # the dictionary of times, the optimal state history
+  pdb.set_trace()
+  np.savetxt("objectiveUNIQUENAME.txt", x_star)
 
   # Do Plotting
   print("Solution found: {0}".format(x_star))

@@ -10,7 +10,7 @@ class NesterovAcceleratedGradient(OptimizationSolver):
     self.a_k = a_k
     self.b_k = b_k
 
-  def run(self, do_print=0):
+  def run(self, do_print=0, max_iter=np.Inf):
     assert hasattr(self, 'a_k') # 'a_k, b_k must be given to set_params first!"
     assert hasattr(self, 'b_k') # 'a_k, b_k must be given to set_params first!"
 
@@ -29,7 +29,7 @@ class NesterovAcceleratedGradient(OptimizationSolver):
       gfk_norm = np.linalg.norm(self.obj_grad_norm)
       gfk_norm_rec = [gfk_norm]
 
-    while (fk > self.obj_tol):
+    while (fk > self.obj_tol and k < max_iter):
       vk_1 = vk
       vk = yk - self.a_k*gfk
 

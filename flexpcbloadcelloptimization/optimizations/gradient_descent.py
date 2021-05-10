@@ -3,13 +3,14 @@ Gradient Descent OptimizationSolver
 
   -=- Does Gradient Descent !
 """
+import numpy as np
 from .optimization_solver_base import OptimizationSolver
 
 class GradientDescent(OptimizationSolver):
   def set_params(self, stepsize):
     self.stepsize = stepsize
 
-  def run(self, do_print=0):
+  def run(self, do_print=0, max_iter=np.Inf):
     assert hasattr(self, 'stepsize'), "Stepsize must be given to set_params first!"
 
     k = 0
@@ -24,7 +25,7 @@ class GradientDescent(OptimizationSolver):
       gfk_norm = np.linalg.norm(self.obj_grad_norm)
       gfk_norm_rec = [gfk_norm]
 
-    while (fk > self.obj_tol):
+    while (fk > self.obj_tol and k < max_iter):
       vk = vk - self.stepsize * gfk;
       fk,state = self.obj(vk)
       gfk = self.obj_grad(vk,state)
