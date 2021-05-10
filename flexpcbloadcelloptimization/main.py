@@ -213,9 +213,9 @@ def do_Calculations(data):
   #x_star, obj_hist = gradient_descent_solver.run(1000)
   
   print("Going to run LBFGS")
-  x_star, obj_hist = lbfgs_solver.run(1)
+  x_star, obj_hist = lbfgs_solver.run(1, max_iter=4)
 
-  return x_star, obj_hist
+  return x_star, obj_hist, obj
 
 def main():
   big_plateA = 0.001527
@@ -228,13 +228,23 @@ def main():
 
   data["common_kn"] = [float(d) for d in data["common_kn"] ]
 
-  x_star, obj_hist = do_Calculations(data)
+  x_star, obj_hist, obj = do_Calculations(data)
 
   # Do Plotting
   print("Solution found: {0}".format(x_star))
-  
+
+  obj_val, state_hist = obj(x_star)
+  force_est = [np.array(state[-1], dtype=float) for state in state_hist]
+  force_est.append(force_est[-1])
+  pdb.set_trace()
+  plt.figure()
+  plt.plot(data["tbs"], force_est, data["tbs"], data["common_kn"])
+  plt.title("True force and Estimated force over time")
+  plt.legend(["Force (kN)", "Estimated Force (kN)"])
+
   plt.figure()
   plt.plot(obj_hist)
+
   plt.show()
   
 
