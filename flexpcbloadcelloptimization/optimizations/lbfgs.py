@@ -36,7 +36,7 @@ class LBFGS(OptimizationSolver):
   def set_params(self, memory):
     self.memory = memory
 
-  def run(self, do_print=0):
+  def run(self, do_print=0, max_iter=np.Inf):
     assert hasattr(self, 'memory'), "Memory must be given to set_params first!"
 
     k = 0
@@ -61,7 +61,7 @@ class LBFGS(OptimizationSolver):
     Sk = [np.array(np.subtract(xk[0], xk[1]))]
     Yk = [np.array(np.subtract(gfk,last_grad))]
 
-    while (fk > self.obj_tol):
+    while (fk > self.obj_tol and k < max_iter):
       #L-BFGS Method
       # compute search dir
       z = Inverse_Hessian_Direction(Yk, Sk, last_grad)
