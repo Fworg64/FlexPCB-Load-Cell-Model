@@ -323,7 +323,11 @@ def main():
   all_data["common_um"] = \
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
+  data['common_kn'] = np.asarray(data['common_kn'], dtype=float)
 
+  # Make the force state and measurements zero mean.
+  data['common_kn'] -= np.mean(data['common_kn'])
+  data['common_um'] -= np.mean(data['common_um'])
   x_star, obj_hist, times, state_hist = do_Calculations(data, runDet)
 
   # Save the list of optimal values, the list of history lists, 
