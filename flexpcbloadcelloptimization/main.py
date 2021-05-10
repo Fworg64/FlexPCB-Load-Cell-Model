@@ -6,6 +6,9 @@ import time
 import control
 import control.matlab
 import scipy
+import csv
+
+from pathlib import Path
 
 from sensordataproc import sensor_interp
 from optimizations.gradient_descent import GradientDescent
@@ -17,6 +20,8 @@ import sys
 import argparse
 
 import pdb
+
+method_keys = ["GD", "NAG", "LBF"]
 
 def get_ndof(M):   # Given the number of masses for the system
   return 2*M*M + 1 # return number of variable entries, ndof, in dynamics matrix
@@ -195,6 +200,10 @@ def generate_params(data, M):
           'zk': zk, 'v0': v0, 'x0':x0, 'P0': P0, 'F_in': F_in}
   return params
 
+def get_solver_params_from_specs(specs):
+  solver_params = {"GD":(specs['step'],), "NAG":(specs['alpha'], specs['beta']), "LBF":(specs['mem'],)}
+  return solver_params
+
 def do_Calculations(data, specs):
   """
    Given the data dictionary, does the calculations for each optimization method
@@ -212,13 +221,41 @@ def do_Calculations(data, specs):
 
   obj_tol  = 10.0
 
+  x_stars = {}
+  obj_hists = {}
+  optimal_hists = {}
+  times = {}
+  solvers = {"GD":GradientDescent, "NAG":NAG, "LBF":LBFGS}
+  solver_params = get_solver_params_from_specs(specs)
+  for method in method_keys:
+    if specs[method]:
+      method_solver = solvers[method](obj, obj_grad, params['v0'], obj_tol)
+      # pack params acording to method
+      method_solver.set_params(*solver_params[method])
+      print("Going to run {0}".format(method))
+      try:
+        ti = time.time()
+        x_stars[method], obj_hists[method] = method_solver.run(specs['update'], specs["max_iter"])
+        to = time.time()
+        times[method] = to - ti
+        _, these_states = obj(x_stars[method])
+        state_array = np.array(these_states)
+        optimal_hists[method] = [state[-1] for state in state_array] # Force estimate is last state
+      except:
+        print("\nError occured with {0}!\n".format(method))
+
+
+  # return dictionary of optimal values, objective history, and times for each method. 
+  # Also return "optimal" Force estimate
+  return x_stars, obj_hists, times, optimal_hists
+
   x_starGD = []
   x_starNAG = []
   x_starLBFGS = []
   obj_histGD = []
   obj_histNAG = []
   obj_histLBFGS = []
-  times = {}
+
   if specs['GD']:
     gradient_descent_solver = GradientDescent(obj, obj_grad, params['v0'], obj_tol)
     gradient_descent_solver.set_params(specs['step'])
@@ -265,9 +302,11 @@ def main():
   parser.add_argument("-g","--GD",help="Run Gradient Descent", action='store_true')
   parser.add_argument("-n", "--NAG", help="Run NAG", action='store_true')
   parser.add_argument("-l", "--LBF", help="Run LBFGS", action='store_true')
-  parser.add_argument("-s", "--step", help="Specify step length for GD, default is 1.0e4", type=float, default=1.0e4)
+  parser.add_argument("-s", "--step", help="Specify step length for GD, default is 1.0e4", 
+    type=float, default=1.0e4)
   parser.add_argument("-a", "--alpha", help="Specify alpha for NAG, default is 1", type=float, default=1)
-  parser.add_argument("-b", "--beta", help="Specify beta for NAG, no input -> beta calculated", type=float)
+  parser.add_argument("-b", "--beta", help="Specify beta for NAG, no input -> beta calculated",
+    type=float, default=0.0)
   parser.add_argument("-m", "--mem", help="Specify memory for LBFGS, default is 2", type=float, default=2)
   parser.add_argument("-u","--update", default=25, type=int, 
           help='Show system performance every UPDATE iterations, 0 suppresses printing, default is 25')
@@ -284,18 +323,38 @@ def main():
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
 
-  x_star, obj_hist, times, obj = do_Calculations(data, runDet)
+  x_star, obj_hist, times, state_hist = do_Calculations(data, runDet)
 
   # Save the list of optimal values, the list of history lists, 
   # the dictionary of times, the optimal state history
-  pdb.set_trace()
-  np.savetxt("objectiveUNIQUENAME.txt", x_star)
+  solver_params = get_solver_params_from_specs(runDet)
+  for method in method_keys:
+    if runDet[method]:
+      try:
+        save_experiment_data(method, solver_params[method], x_star[method], obj_hist[method],
+                           times[method], state_hist[method])
+      except:
+        print("\nError saving {0}!\n".format(method))
 
-  # Do Plotting
-  print("Solution found: {0}".format(x_star))
+  print("\n\nDone!, Total time was {0}".format(sum(times.values())))
   
 
-  
+def save_experiment_data(method_name, method_params_tuple, optimal_point, objective_history,
+                         solve_time, state_history):
+  Path("out").mkdir(parents=True, exist_ok=True)
+  filename = "out/" + method_name + time.strftime("%Y%m%d-%H%M%S") + ".txt"
+  with open(filename, 'w', newline='') as csvfile:
+    my_writer = csv.writer(csvfile, delimiter=',')
+    my_writer.writerow([method_name, method_params_tuple])
+    my_writer.writerow(optimal_point)
+    my_writer.writerow(["Solve Time: ", solve_time])
+    my_writer.writerow(["Objective History"])
+    for obj in objective_history:
+      my_writer.writerow([obj])
+    my_writer.writerow(["State History"])
+    for obj in state_history:
+      my_writer.writerow(obj)
+  print("Saved {0} to {1}".format(method_name, filename))
 
 
 
