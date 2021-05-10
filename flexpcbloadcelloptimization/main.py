@@ -10,6 +10,7 @@ import scipy
 from sensordataproc import sensor_interp
 from optimizations.gradient_descent import GradientDescent
 from optimizations.nag import NesterovAcceleratedGradient as NAG
+from optimizations.lbfgs import LBFGS
 from calc_Kalman import calc_Kalman
 import grads as g
 import sys
@@ -233,9 +234,18 @@ def do_Calculations(data, specs):
     to = time.time()
     times['NAG'] = to - ti
 
+  if specs['LBF']:
+    LBF_solver = LBFGS(obj, obj_grad, v0, obj_tol)
+    LBF_solver.set_params(specs['mem'])
 
-  x_star = [x_starNAG,x_starGD]
-  obj_hist = [obj_histNAG,obj_histGD]
+    ti = time.time()
+    x_starLBFGS, obj_histLBFGS = LBF_solver.run(specs['update'])
+    to = time.time()
+    times['LBF'] = to - ti
+
+
+  x_star = [x_starNAG,x_starGD,x_starLBFGS]
+  obj_hist = [obj_histNAG,obj_histGD,obj_histLBFGS]
 
   return x_star, obj_hist, times
 
@@ -248,6 +258,7 @@ def main():
   parser.add_argument("-s", "--step", help="Specify step length for GD, default is 1.0e4", type=float, default=1.0e4)
   parser.add_argument("-a", "--alpha", help="Specify alpha for NAG, default is 1", type=float, default=1)
   parser.add_argument("-b", "--beta", help="Specify beta for NAG, no input -> beta calculated", type=float)
+  parser.add_argument("-m", "--mem", help="Specify memory for LBFGS, default is 2", type=float, default=2)
   parser.add_argument("-u","--update", default=1000, type=int, help='Show system performance every UPDATE iterations, 0 suppresses printing, default is 1000')
   runDet = vars(parser.parse_args())
 
@@ -265,9 +276,7 @@ def main():
   # Do Plotting
   print("Solution found: {0}".format(x_star))
   
-  plt.figure()
-  plt.plot(obj_hist)
-  plt.show()
+
   
 
 
