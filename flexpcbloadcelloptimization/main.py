@@ -7,8 +7,10 @@ import control
 import control.matlab
 import scipy
 import csv
-
 from pathlib import Path
+
+import sys
+import argparse
 
 from sensordataproc import sensor_interp
 from optimizations.gradient_descent import GradientDescent
@@ -16,8 +18,7 @@ from optimizations.nag import NesterovAcceleratedGradient as NAG
 from optimizations.lbfgs import LBFGS
 from calc_Kalman import calc_Kalman
 import grads as g
-import sys
-import argparse
+
 
 import pdb
 
