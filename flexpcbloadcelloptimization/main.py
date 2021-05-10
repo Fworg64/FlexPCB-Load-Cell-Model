@@ -9,7 +9,6 @@ import scipy
 
 from sensordataproc import sensor_interp
 from optimizations.gradient_descent import GradientDescent
-from optimizations.lbfgs import LBFGS
 from calc_Kalman import calc_Kalman
 import grads as g
 
@@ -185,7 +184,7 @@ def do_Calculations(data):
   # Load the data from a list in a dictionary
   # Measurements for system
   zk = np.asarray(data["common_um"], dtype=float).reshape((nOuts,nSamples)) # np.random.rand(nOuts, nSamples) 
-  v0 = np.array([-100.0,-100.0,100.0, 100.0, 50.0, 100.0, 100.0, -100.0, -100.0])  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
+  v0 = np.array([-10.0,-1.0,10.0, 1.0, 5.0, 10.0, 1.0, -10.0, -1.0])  # v0 is the initialization of our optimization variable v (to avoid conflict with state variable x)
   x0 = np.zeros(ndim)
   P0 = np.eye(ndim)
   F_in = np.asarray(data["common_kn"], dtype=float) # np.zeros(nSamples) # True applied force
@@ -205,17 +204,11 @@ def do_Calculations(data):
   gradient_descent_solver = GradientDescent(obj, obj_grad, v0, obj_tol)
   gradient_descent_solver.set_params(stepsize)
 
-  lbfgs_solver = LBFGS(obj, obj_grad, v0, obj_tol)
-  lbfgs_solver.set_params(2)
-
   # Run solvers
-  #print("Going to run Gradient Descent")
-  #x_star, obj_hist = gradient_descent_solver.run(1000)
-  
-  print("Going to run LBFGS")
-  x_star, obj_hist = lbfgs_solver.run(1, max_iter=4)
+  print("Going to run Gradient Descent")
+  x_star, obj_hist = gradient_descent_solver.run(1000)
 
-  return x_star, obj_hist, obj
+  return x_star, obj_hist
 
 def main():
   big_plateA = 0.001527
@@ -226,25 +219,13 @@ def main():
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
 
-  data["common_kn"] = [float(d) for d in data["common_kn"] ]
-
-  x_star, obj_hist, obj = do_Calculations(data)
+  x_star, obj_hist = do_Calculations(data)
 
   # Do Plotting
   print("Solution found: {0}".format(x_star))
-
-  obj_val, state_hist = obj(x_star)
-  force_est = [np.array(state[-1], dtype=float) for state in state_hist]
-  force_est.append(force_est[-1])
-  pdb.set_trace()
-  plt.figure()
-  plt.plot(data["tbs"], force_est, data["tbs"], data["common_kn"])
-  plt.title("True force and Estimated force over time")
-  plt.legend(["Force (kN)", "Estimated Force (kN)"])
-
+  
   plt.figure()
   plt.plot(obj_hist)
-
   plt.show()
   
 
