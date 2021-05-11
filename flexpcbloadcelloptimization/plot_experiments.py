@@ -2,7 +2,8 @@ import sys
 import argparse
 import pdb
 import csv
-
+from pathlib import Path
+import time
 import matplotlib.pyplot as plt
 
 def main():
@@ -54,19 +55,32 @@ def main():
       while GT_val is not None:
         GT_vals[title].append(float(GT_val[0]))
         GT_val = next(csvreader, None)
+  Path("graphics").mkdir(parents=True, exist_ok=True)
+
   if arg_dict["convergence"]:
-    fig1 = plt.figure(1)
+    fig1 = plt.figure()
+    ax1 = fig1.add_subplot(111)
     for test in test_names:
       plt.plot(obj_vals[test], label=test)
-
-    fig1.legend()
+    filename = "graphics/" + 'convergence' + time.strftime("%Y%m%d-%H%M%S") + ".png"
+    ax1.legend()
+    ax1.set(title='Convergence Plot for ' + test_names[0].split(' ')[0],
+             xlabel='Iteration Number',
+             ylabel='Objective Value')
+    fig1.savefig(filename)
   if arg_dict["force"]:
-    fig2 = plt.figure(2)
+    fig2 = plt.figure()
+    ax2 = fig2.add_subplot(111)
     for test in test_names:
       plt.plot(force_vals[test], label=test)
     plt.plot(GT_vals[test_names[0]], label='Ground Truth')
-    fig2.legend()
-  plt.show()
+    ax2.legend()
+    ax2.set(title = 'Force Plot for ' + test_names[0].split(' ')[0],
+             xlabel = 'Samples',
+             ylabel = 'Force')
+    filename = "graphics/" + 'force' + time.strftime("%Y%m%d-%H%M%S") + ".png"
+    fig2.savefig(filename)
+ # plt.show()
 
 
 if __name__ == "__main__":
