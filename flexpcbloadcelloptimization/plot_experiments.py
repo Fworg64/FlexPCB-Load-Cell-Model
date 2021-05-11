@@ -19,7 +19,7 @@ def main():
   x_star = {}
   obj_vals = {}
   force_vals = {}
-
+  GT_vals = {}
   test_names = []
 
   for file in arg_dict["files"]:
@@ -32,30 +32,40 @@ def main():
       computation_time[title] = next(csvreader)
       x_star = next(csvreader)
       objective_history_title = next(csvreader)
-
       # iterate until you get to next title: "State History"
       obj_val = next(csvreader, None)
-      pdb.set_trace()
       obj_vals[title] = []
       while "State History" not in obj_val:
         if obj_val is None:
           print("UH-Oh")
-        obj_vals[title].append(obj_val[0])
+        obj_vals[title].append(float(obj_val[0]))
         obj_val = next(csvreader, None)
 
       # Record force history
       force_val = next(csvreader, None)
       force_vals[title] = []
-      while force_val is not None:
-        force_vals[title].append(force_val[0])
+      while "Ground Truth" not in force_val:
+        force_vals[title].append(float(force_val[0]))
         force_val = next(csvreader, None)
-  pdb.set_trace()
+
+      # Record Ground Truth
+      GT_val = next(csvreader, None)
+      GT_vals[title] = []
+      while GT_val is not None:
+        GT_vals[title].append(float(GT_val[0]))
+        GT_val = next(csvreader, None)
   if arg_dict["convergence"]:
-    plt.figure()
+    fig1 = plt.figure(1)
     for test in test_names:
-      plt.plot(obj_vals[test])
-      #plt.hold(True)
-  
+      plt.plot(obj_vals[test], label=test)
+
+    fig1.legend()
+  if arg_dict["force"]:
+    fig2 = plt.figure(2)
+    for test in test_names:
+      plt.plot(force_vals[test], label=test)
+      plt.plot(GT_vals[test], label='Ground Truth')
+    fig2.legend()
   plt.show()
 
 
