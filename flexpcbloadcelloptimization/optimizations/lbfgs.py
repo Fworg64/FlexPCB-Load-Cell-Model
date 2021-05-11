@@ -67,7 +67,7 @@ class LBFGS(OptimizationSolver):
       z = Inverse_Hessian_Direction(Yk, Sk, last_grad)
       # line search
       div = 200
-      search_len = 0.0001
+      search_len = 0.000001
       steps = np.zeros((div,1))
       potentialXkfun = np.zeros((div,1))
       for b_index in range(0,div):
