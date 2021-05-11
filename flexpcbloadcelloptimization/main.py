@@ -221,7 +221,7 @@ def do_Calculations(data, specs):
   obj          = generate_kalman_objective(params)
   obj_grad     = generate_kalman_objective_gradient(params)
 
-  obj_tol  = 10.0
+  obj_tol  = 1.0e-8
 
   x_stars = {}
   obj_hists = {}
@@ -327,20 +327,21 @@ def main():
     sensor_interp.calculate_distance_from_readings_and_params(all_data["common_chan0"], params_chan0)
   data = {key: all_data[key][100:200] for key in ["tbs", "common_kn", "common_um"]}
   data['common_kn'] = np.asarray(data['common_kn'], dtype=float)
-
+  data['common_kn'] *= 1.0e-8
   # Make the force state and measurements zero mean.
-  data['common_kn'] -= np.mean(data['common_kn'])
-  data['common_um'] -= np.mean(data['common_um'])
+  data['common_kn'] -= data['common_kn'][0]
+  data['common_um'] -= data['common_um'][0]
   x_star, obj_hist, times, state_hist = do_Calculations(data, runDet)
 
   # Save the list of optimal values, the list of history lists, 
   # the dictionary of times, the optimal state history
   solver_params = get_solver_params_from_specs(runDet)
+
   for method in method_keys:
     if runDet[method]:
       try:
         save_experiment_data(method, solver_params[method], x_star[method], obj_hist[method],
-                           times[method], state_hist[method])
+                           times[method], state_hist[method], data['common_kn'].tolist())
       except:
         print("\nError saving {0}!\n".format(method))
 
@@ -348,7 +349,7 @@ def main():
   
 
 def save_experiment_data(method_name, method_params_tuple, optimal_point, objective_history,
-                         solve_time, state_history):
+                         solve_time, state_history, ground_truth):
   Path("out").mkdir(parents=True, exist_ok=True)
   filename = "out/" + method_name + time.strftime("%Y%m%d-%H%M%S") + ".txt"
   with open(filename, 'w', newline='') as csvfile:
@@ -362,6 +363,9 @@ def save_experiment_data(method_name, method_params_tuple, optimal_point, object
     my_writer.writerow(["State History"])
     for obj in state_history:
       my_writer.writerow(obj)
+    my_writer.writerow(["Ground Truth"])
+    for obj in ground_truth:
+      my_writer.writerow([obj])
   print("Saved {0} to {1}".format(method_name, filename))
 
 

@@ -13,7 +13,7 @@ class NesterovAcceleratedGradient(OptimizationSolver):
   def run(self, do_print=0, max_iter=np.Inf):
     assert hasattr(self, 'a_k') # 'a_k, b_k must be given to set_params first!"
     assert hasattr(self, 'b_k') # 'a_k, b_k must be given to set_params first!"
-
+    bCalc = False
     if self.b_k == 0:
       bCalc = True
     k = 0
@@ -46,7 +46,6 @@ class NesterovAcceleratedGradient(OptimizationSolver):
 
       fk,state = self.obj(vk)
       gfk = self.obj_grad(yk,state)
-
 
       fk_rec.append(fk)
 
