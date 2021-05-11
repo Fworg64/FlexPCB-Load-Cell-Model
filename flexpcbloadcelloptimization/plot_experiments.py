@@ -64,7 +64,7 @@ def main():
     fig2 = plt.figure(2)
     for test in test_names:
       plt.plot(force_vals[test], label=test)
-      plt.plot(GT_vals[test], label='Ground Truth')
+    plt.plot(GT_vals[test_names[0]], label='Ground Truth')
     fig2.legend()
   plt.show()
 
